@@ -74,6 +74,11 @@ function rowIsUpvoted(row: Row, map: Map<string, VoteValue>): boolean {
     ["anglo_hangul", row.anglo_hangul, null],
     ["katakana", row.katakana, null],
     ["anglo_katakana", row.anglo_katakana, null],
+    ["decomposed_pinyin", row.decomposed_pinyin.initial, 0],
+    ["decomposed_pinyin", row.decomposed_pinyin.final, 1],
+    row.decomposed_pinyin.tone !== null
+      ? ["decomposed_pinyin", String(row.decomposed_pinyin.tone), 2]
+      : ["decomposed_pinyin", null, 2],
   ];
   return checks.some(([col, val, idx]) => getVote(map, col, val, idx) === 1);
 }
