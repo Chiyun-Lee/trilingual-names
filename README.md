@@ -67,7 +67,3 @@ docker compose up --build
 ```
 
 Votes are persisted in `app/data/votes.db` on the host.
-
-## TODO
-
-- Create database and enable writes
