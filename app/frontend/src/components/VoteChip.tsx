@@ -3,7 +3,7 @@ import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { Vote, VoteValue } from "../api/types";
+import type { VoteValue } from "../api/types";
 
 interface Props {
   columnName: string;
