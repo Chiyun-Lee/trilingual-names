@@ -1,4 +1,4 @@
-# triolingo
+# trilingual-names
 
 - https://www.unicode.org/versions/Unicode17.0.0/
 
