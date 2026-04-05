@@ -4,7 +4,7 @@ app/.venv/
 app/frontend/node_modules/
 app/frontend/dist/
 app/frontend/package-lock.json
-app/data/votes.db
+app/data/*.db
 
 
 

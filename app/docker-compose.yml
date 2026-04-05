@@ -5,13 +5,13 @@ services:
       dockerfile: Dockerfile.api
     volumes:
       # Persist votes DB across container restarts
-      - ./data/votes.db:/app/votes.db
+      - ./data:/app/data
       # Mount cleaned data read-only
       - ../data/cleaned:/data/cleaned:ro
     environment:
       - PYTHONUNBUFFERED=1
       - DATA_PATH=/data/cleaned/merged.pkl.xz
-      - DB_PATH=/app/votes.db
+      - DB_PATH=/app/data/votes.db
     restart: unless-stopped
 
   app:
