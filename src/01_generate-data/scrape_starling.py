@@ -15,22 +15,25 @@ Output:
 import re
 import sys
 import time
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://starlingdb.org/cgi-bin/response.cgi"
 
+_DATA_RAW = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
+
 DATABASES = [
     {
         "name": "doc",
-        "basename": "../data/china/doc",
-        "output": "../data/starling_doc.tsv",
+        "basename": "/data/china/doc",
+        "output": str(_DATA_RAW / "starling_doc.tsv"),
     },
     {
         "name": "bigchina",
-        "basename": "../data/china/bigchina",
-        "output": "../data/starling_bigchina.tsv",
+        "basename": "/data/china/bigchina",
+        "output": str(_DATA_RAW / "starling_bigchina.tsv"),
     },
 ]
 
