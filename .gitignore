@@ -1,5 +1,4 @@
 # Project-specific files
-data/cleaned/
 app/.venv/
 app/frontend/node_modules/
 app/frontend/dist/
