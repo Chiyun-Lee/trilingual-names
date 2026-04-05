@@ -1,4 +1,10 @@
 # Project-specific files
+data/cleaned/
+app/.venv/
+app/frontend/node_modules/
+app/frontend/dist/
+app/data/votes.db
+
 
 
 # Byte-compiled / optimized / DLL files

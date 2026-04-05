@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    volumes:
+      # Persist votes DB across container restarts
+      - ./data/votes.db:/app/votes.db
+      # Mount cleaned data read-only
+      - ../data/cleaned:/data/cleaned:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATA_PATH=/data/cleaned/merged.pkl.xz
+      - DB_PATH=/app/votes.db
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
