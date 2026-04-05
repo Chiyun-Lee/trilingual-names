@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 from collections import defaultdict
+from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 import db
@@ -72,6 +75,37 @@ def put_vote(body: VoteBody) -> dict:
 def delete_vote(body: VoteBody) -> dict:
     db.delete_vote(body.column_name, body.value, body.sub_index)
     return {"ok": True}
+
+
+@app.get("/api/votes/export")
+def export_votes() -> Response:
+    votes = db.get_votes()
+    payload = json.dumps({"votes": votes}, indent=2)
+    filename = f"votes_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
+    return Response(
+        content=payload,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/votes/import")
+async def import_votes(file: UploadFile) -> dict:
+    try:
+        raw = await file.read()
+        payload = json.loads(raw)
+        votes = payload["votes"]
+    except Exception as e:
+        raise HTTPException(400, f"Invalid file: {e}")
+
+    imported = 0
+    for v in votes:
+        try:
+            db.upsert_vote(v["column_name"], v["value"], v.get("sub_index"), v["vote"])
+            imported += 1
+        except Exception:
+            pass
+    return {"imported": imported}
 
 
 # ---------------------------------------------------------------------------
