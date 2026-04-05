@@ -5,8 +5,7 @@ import pickle
 from functools import lru_cache
 from pathlib import Path
 
-_DEFAULT_DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "cleaned" / "merged.pkl.xz"
-DATA_PATH = Path(os.environ.get("DATA_PATH", str(_DEFAULT_DATA_PATH)))
+DATA_PATH = Path(os.environ.get("DATA_PATH", "/data/cleaned/merged.pkl.xz"))
 
 COLUMNS = [
     "hanzi", "definition", "pinyin", "decomposed_pinyin",
