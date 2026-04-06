@@ -2,6 +2,10 @@
 
 A tool for exploring and curating Chinese character data across Mandarin (pinyin), Korean (hangul), and Japanese (katakana) pronunciation systems.
 
+## TODO
+
+- Top 3000 most common characters
+
 ## Data sources
 
 - [Unicode Unihan Database](https://www.unicode.org/versions/Unicode17.0.0/)
@@ -28,7 +32,33 @@ app/
 
 ## Setup
 
-### 1. Generate cleaned data
+### 1. Set up local LLM (Qwen) for annotations
+
+The merge notebook annotates each character with English meaning, name-suitability, and cultural notes using [Qwen2.5:7b](https://ollama.com/library/qwen2.5) via [Ollama](https://ollama.com/).
+
+```bash
+# Install Ollama (macOS)
+brew install ollama
+
+# Start the server (runs in background on port 11434)
+ollama serve &
+
+# Pull the model (~4.7 GB, only needed once)
+ollama pull qwen2.5:7b
+```
+
+Install the Python client into your venv:
+```bash
+pip install ollama
+```
+
+Annotations are cached in `data/cleaned/annotations.json` after every character, so the run is fully resumable. Re-running the annotation cell skips already-processed characters.
+
+> **Minimum specs:** 8 GB RAM. On Apple Silicon the model runs on the Neural Engine; on x86 it falls back to CPU (slower).
+
+---
+
+### 2. Generate cleaned data
 
 Run the notebooks in order:
 
