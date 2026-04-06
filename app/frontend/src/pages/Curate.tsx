@@ -159,7 +159,16 @@ export default function Curate() {
 
   const voteMap = useMemo(() => buildVoteMap(votes), [votes]);
 
-  const rows = data?.rows ?? [];
+  const rawRows = data?.rows ?? [];
+  // Client-side filter covers the instant between a downvote click and the
+  // server refetch arriving. Once the refetch lands, server pagination takes
+  // over and fills the page back to 100 rows correctly.
+  const rows = useMemo(
+    () => filter === "non-downvoted"
+      ? rawRows.filter((row) => !rowIsDownvoted(row, voteMap))
+      : rawRows,
+    [rawRows, filter, voteMap]
+  );
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
