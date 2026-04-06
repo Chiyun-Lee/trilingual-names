@@ -193,7 +193,7 @@ def get_explore(source: str, target: str) -> dict:
             "source": s,
             "target": t,
             "count":  len(entries),
-            "samples": entries[:5],
+            "samples": entries,
         })
 
     # Sort by count descending so the frontend can render heaviest flows first

@@ -1,8 +1,9 @@
 import { Group } from "@visx/group";
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip";
+import { Popover, Typography } from "@mui/material";
 import { scaleLinear } from "d3-scale";
 import { linkHorizontal } from "d3-shape";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ExploreLink, ExploreResponse } from "../api/types";
 
 const MARGIN = { top: 20, bottom: 20, left: 140, right: 140 };
@@ -10,6 +11,7 @@ const NODE_HEIGHT = 18;
 const NODE_GAP = 4;
 const MIN_LINK_OPACITY = 0.15;
 const MAX_LINK_OPACITY = 0.7;
+const PREVIEW_COUNT = 5;
 
 interface Point { x: number; y: number; }
 interface LinkDatum { source: Point; target: Point; }
@@ -79,6 +81,10 @@ export default function ParallelCategories({
     useTooltip<TooltipData>();
   const { containerRef, TooltipInPortal } = useTooltipInPortal({ detectBounds: true });
 
+  // Pinned link: shown in a persistent popover on click
+  const [pinnedLink, setPinnedLink] = useState<ExploreLink | null>(null);
+  const [popoverAnchor, setPopoverAnchor] = useState<{ top: number; left: number } | null>(null);
+
   const innerWidth = width - MARGIN.left - MARGIN.right;
   const innerHeight = height - MARGIN.top - MARGIN.bottom;
 
@@ -123,6 +129,20 @@ export default function ParallelCategories({
     [showTooltip]
   );
 
+  const handleClick = useCallback(
+    (event: React.MouseEvent, link: ExploreLink) => {
+      event.stopPropagation();
+      setPinnedLink(link);
+      setPopoverAnchor({ top: event.clientY, left: event.clientX });
+    },
+    []
+  );
+
+  const closePinned = useCallback(() => {
+    setPinnedLink(null);
+    setPopoverAnchor(null);
+  }, []);
+
   // Offset accumulators — mutated during render (not state, intentionally)
   const srcOffsets = new Map<string, number>();
   const tgtOffsets = new Map<string, number>();
@@ -146,18 +166,20 @@ export default function ParallelCategories({
 
     const d = makeBand(0, sy0, 0, sy1, innerWidth, ty0, innerWidth, ty1);
     const opacity = opacityScale(link.count);
+    const isPinned = pinnedLink?.source === link.source && pinnedLink?.target === link.target;
 
     return (
       <path
         key={`${link.source}-${link.target}`}
         d={d}
-        fill="steelblue"
-        opacity={opacity}
+        fill={isPinned ? "darkorange" : "steelblue"}
+        opacity={isPinned ? 0.85 : opacity}
         onMouseMove={(e) => handleHover(e, link)}
         onMouseLeave={hideTooltip}
+        onClick={(e) => handleClick(e, link)}
         style={{ cursor: "pointer", transition: "opacity 0.15s" }}
         onMouseEnter={(e) => (e.currentTarget.style.opacity = String(Math.min(1, opacity + 0.3)))}
-        onMouseOut={(e) => (e.currentTarget.style.opacity = String(opacity))}
+        onMouseOut={(e) => (e.currentTarget.style.opacity = String(isPinned ? 0.85 : opacity))}
       />
     );
   });
@@ -208,7 +230,8 @@ export default function ParallelCategories({
         </Group>
       </svg>
 
-      {tooltipData && (
+      {/* Hover tooltip — shows first PREVIEW_COUNT samples */}
+      {tooltipData && !pinnedLink && (
         <TooltipInPortal left={tooltipLeft} top={tooltipTop}>
           <div style={{ fontSize: 13, maxWidth: 260, lineHeight: 1.5 }}>
             <strong>
@@ -216,20 +239,49 @@ export default function ParallelCategories({
             </strong>
             <div style={{ color: "#555" }}>{tooltipData.link.count} characters</div>
             <hr style={{ margin: "4px 0", borderColor: "#ddd" }} />
-            {tooltipData.link.samples.map((s, i) => (
+            {tooltipData.link.samples.slice(0, PREVIEW_COUNT).map((s, i) => (
               <div key={i}>
                 <span style={{ fontSize: 18 }}>{s.hanzi}</span>{" "}
                 <span style={{ color: "#444" }}>{s.definition}</span>
               </div>
             ))}
-            {tooltipData.link.count > 5 && (
-              <div style={{ color: "#888", marginTop: 4 }}>
-                +{tooltipData.link.count - 5} more…
+            {tooltipData.link.count > PREVIEW_COUNT && (
+              <div style={{ color: "#888", marginTop: 4, fontStyle: "italic" }}>
+                Click to see all {tooltipData.link.count}…
               </div>
             )}
           </div>
         </TooltipInPortal>
       )}
+
+      {/* Click popover — shows all samples */}
+      <Popover
+        open={!!pinnedLink && !!popoverAnchor}
+        onClose={closePinned}
+        anchorReference="anchorPosition"
+        anchorPosition={popoverAnchor ?? { top: 0, left: 0 }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        slotProps={{ paper: { sx: { p: 2, maxWidth: 320, maxHeight: 480 } } }}
+      >
+        {pinnedLink && (
+          <>
+            <Typography variant="subtitle2" gutterBottom>
+              {pinnedLink.source} → {pinnedLink.target}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              {pinnedLink.count} characters
+            </Typography>
+            <div style={{ overflowY: "auto", maxHeight: 380 }}>
+              {pinnedLink.samples.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "3px 0", borderBottom: "1px solid #f0f0f0" }}>
+                  <span style={{ fontSize: 20, minWidth: 28 }}>{s.hanzi}</span>
+                  <span style={{ fontSize: 13, color: "#444", lineHeight: 1.4 }}>{s.definition}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </Popover>
     </>
   );
 }
