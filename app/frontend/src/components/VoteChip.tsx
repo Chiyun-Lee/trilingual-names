@@ -46,7 +46,10 @@ export default function VoteChip({
     onError: (_err, _incoming, ctx) => {
       if (ctx?.prev !== undefined) qc.setQueryData(["votes"], ctx.prev);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["votes"] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["votes"] });
+      qc.invalidateQueries({ queryKey: ["data"] });
+    },
   });
 
   const handle = (v: VoteValue) => {

@@ -159,15 +159,7 @@ export default function Curate() {
 
   const voteMap = useMemo(() => buildVoteMap(votes), [votes]);
 
-  const rawRows = data?.rows ?? [];
-  // In non-downvoted mode, re-apply the filter client-side so newly downvoted
-  // rows disappear instantly from the optimistic vote cache update.
-  const rows = useMemo(
-    () => filter === "non-downvoted"
-      ? rawRows.filter((row) => !rowIsDownvoted(row, voteMap))
-      : rawRows,
-    [rawRows, filter, voteMap]
-  );
+  const rows = data?.rows ?? [];
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
