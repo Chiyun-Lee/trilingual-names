@@ -75,14 +75,14 @@ jupyter nbconvert --to notebook --execute src/02_cleaning-data/2026-04-05_starli
 jupyter nbconvert --to notebook --execute src/03_playing-with-data/2026-04-05_merge_and_filter.ipynb --inplace
 ```
 
-### 2. Run locally
+### 3. Run locally
 
 ```bash
 # API
 cd app
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r api/requirements.txt
-cd api && uvicorn main:app --reload
+uvicorn api.main:app --reload
 
 # Frontend (separate terminal)
 cd app/frontend
@@ -90,7 +90,7 @@ npm install && npm run dev
 # → http://localhost:5173
 ```
 
-### 3. Deploy on NAS (Docker)
+### 4. Deploy on NAS (Docker)
 
 ```bash
 cd app

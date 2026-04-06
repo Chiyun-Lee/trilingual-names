@@ -8,6 +8,8 @@ export interface DecomposedPinyin {
 export interface Row {
   id: number;
   hanzi: string | null;
+  simplified: string | null;
+  radical: string | null;
   definition: string | null;
   pinyin: string | null;
   decomposed_pinyin: DecomposedPinyin;
@@ -16,6 +18,9 @@ export interface Row {
   anglo_hangul: string | null;
   katakana: string | null;
   anglo_katakana: string | null;
+  meaning: string | null;
+  name_use: string | null;
+  note: string | null;
 }
 
 export interface DataResponse {
@@ -50,6 +55,7 @@ export interface ExploreResponse {
 }
 
 export type VoteableColumn =
+  | "radical"
   | "definition"
   | "pinyin"
   | "decomposed_pinyin"
@@ -57,7 +63,9 @@ export type VoteableColumn =
   | "hangul"
   | "anglo_hangul"
   | "katakana"
-  | "anglo_katakana";
+  | "anglo_katakana"
+  | "name_use"
+  | "note";
 
 export type ExploreColumn =
   | "pinyin"

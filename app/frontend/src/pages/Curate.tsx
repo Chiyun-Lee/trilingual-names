@@ -14,6 +14,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -46,9 +47,9 @@ function getVote(
   return map.get(`${col}::${value}::${subIndex ?? "null"}`) ?? null;
 }
 
-// A row is "downvoted" if any of its cells has an active downvote
-function rowIsDownvoted(row: Row, map: Map<string, VoteValue>): boolean {
-  const checks: [string, string | null, number | null][] = [
+function rowVoteCells(row: Row): [string, string | null, number | null][] {
+  return [
+    ["radical", row.radical, null],
     ["definition", row.definition, null],
     ["pinyin", row.pinyin, null],
     ["toneless_pinyin", row.toneless_pinyin, null],
@@ -56,31 +57,23 @@ function rowIsDownvoted(row: Row, map: Map<string, VoteValue>): boolean {
     ["anglo_hangul", row.anglo_hangul, null],
     ["katakana", row.katakana, null],
     ["anglo_katakana", row.anglo_katakana, null],
+    ["name_use", row.name_use, null],
+    ["note", row.note, null],
     ["decomposed_pinyin", row.decomposed_pinyin.initial, 0],
     ["decomposed_pinyin", row.decomposed_pinyin.final, 1],
     row.decomposed_pinyin.tone !== null
       ? ["decomposed_pinyin", String(row.decomposed_pinyin.tone), 2]
       : ["decomposed_pinyin", null, 2],
   ];
-  return checks.some(([col, val, idx]) => getVote(map, col, val, idx) === -1);
+}
+
+// A row is "downvoted" if any of its cells has an active downvote
+function rowIsDownvoted(row: Row, map: Map<string, VoteValue>): boolean {
+  return rowVoteCells(row).some(([col, val, idx]) => getVote(map, col, val, idx) === -1);
 }
 
 function rowIsUpvoted(row: Row, map: Map<string, VoteValue>): boolean {
-  const checks: [string, string | null, number | null][] = [
-    ["definition", row.definition, null],
-    ["pinyin", row.pinyin, null],
-    ["toneless_pinyin", row.toneless_pinyin, null],
-    ["hangul", row.hangul, null],
-    ["anglo_hangul", row.anglo_hangul, null],
-    ["katakana", row.katakana, null],
-    ["anglo_katakana", row.anglo_katakana, null],
-    ["decomposed_pinyin", row.decomposed_pinyin.initial, 0],
-    ["decomposed_pinyin", row.decomposed_pinyin.final, 1],
-    row.decomposed_pinyin.tone !== null
-      ? ["decomposed_pinyin", String(row.decomposed_pinyin.tone), 2]
-      : ["decomposed_pinyin", null, 2],
-  ];
-  return checks.some(([col, val, idx]) => getVote(map, col, val, idx) === 1);
+  return rowVoteCells(row).some(([col, val, idx]) => getVote(map, col, val, idx) === 1);
 }
 
 interface CellProps {
@@ -141,13 +134,25 @@ function DecomposedCell({ row, voteMap }: { row: Row; voteMap: Map<string, VoteV
   );
 }
 
+type SortCol = "hanzi" | "simplified" | "radical" | "definition" | "meaning" | "name_use" | "note"
+  | "pinyin" | "toneless_pinyin" | "hangul" | "anglo_hangul" | "katakana" | "anglo_katakana";
+
+function rowSortKey(row: Row, col: SortCol): string {
+  if (col === "decomposed_pinyin" as string) return row.decomposed_pinyin.raw ?? "";
+  const val = row[col as keyof Row];
+  if (val === null || val === undefined) return "";
+  return String(val);
+}
+
 export default function Curate() {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<VoteFilter>("all");
+  const [sortCol, setSortCol] = useState<SortCol | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["data", page],
-    queryFn: () => api.getData(page, PAGE_SIZE),
+    queryKey: ["data", page, filter],
+    queryFn: () => api.getData(page, PAGE_SIZE, filter),
   });
 
   const { data: votes = [] } = useQuery({
@@ -157,25 +162,46 @@ export default function Curate() {
 
   const voteMap = useMemo(() => buildVoteMap(votes), [votes]);
 
+  const rawRows = data?.rows ?? [];
   const rows = useMemo(() => {
-    if (!data) return [];
-    if (filter === "all") return data.rows;
-    if (filter === "upvoted") return data.rows.filter((r) => rowIsUpvoted(r, voteMap));
-    return data.rows.filter((r) => !rowIsDownvoted(r, voteMap));
-  }, [data, filter, voteMap]);
+    if (!sortCol) return rawRows;
+    return [...rawRows].sort((a, b) => {
+      const ka = rowSortKey(a, sortCol);
+      const kb = rowSortKey(b, sortCol);
+      // Empty values always sink to bottom
+      if (!ka && kb) return 1;
+      if (ka && !kb) return -1;
+      const cmp = ka.localeCompare(kb, undefined, { sensitivity: "base" });
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [rawRows, sortCol, sortDir]);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
-  const COLS = [
-    "definition",
-    "pinyin",
-    "decomposed_pinyin",
-    "toneless_pinyin",
-    "hangul",
-    "anglo_hangul",
-    "katakana",
-    "anglo_katakana",
-  ] as const;
+  function handleSort(col: SortCol) {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  }
+
+  const COLS: { key: string; sortable: boolean }[] = [
+    { key: "simplified",       sortable: true  },
+    { key: "radical",          sortable: true  },
+    { key: "definition",       sortable: true  },
+    { key: "meaning",          sortable: true  },
+    { key: "name_use",         sortable: true  },
+    { key: "note",             sortable: true  },
+    { key: "pinyin",           sortable: true  },
+    { key: "decomposed_pinyin", sortable: false },
+    { key: "toneless_pinyin",  sortable: true  },
+    { key: "hangul",           sortable: true  },
+    { key: "anglo_hangul",     sortable: true  },
+    { key: "katakana",         sortable: true  },
+    { key: "anglo_katakana",   sortable: true  },
+  ];
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", p: 2, gap: 1.5 }}>
@@ -187,7 +213,10 @@ export default function Curate() {
           <Select
             value={filter}
             label="Show"
-            onChange={(e) => setFilter(e.target.value as VoteFilter)}
+            onChange={(e) => {
+              setFilter(e.target.value as VoteFilter);
+              setPage(0);
+            }}
           >
             <MenuItem value="all">All rows</MenuItem>
             <MenuItem value="non-downvoted">Non-downvoted</MenuItem>
@@ -211,10 +240,28 @@ export default function Curate() {
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700, fontSize: 18 }}>漢</TableCell>
-                {COLS.map((c) => (
-                  <TableCell key={c} sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-                    {c.replace(/_/g, " ")}
+                <TableCell sx={{ fontWeight: 700, fontSize: 18 }}>
+                  <TableSortLabel
+                    active={sortCol === "hanzi"}
+                    direction={sortCol === "hanzi" ? sortDir : "asc"}
+                    onClick={() => handleSort("hanzi")}
+                  >
+                    漢
+                  </TableSortLabel>
+                </TableCell>
+                {COLS.map(({ key, sortable }) => (
+                  <TableCell key={key} sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                    {sortable ? (
+                      <TableSortLabel
+                        active={sortCol === key}
+                        direction={sortCol === key ? sortDir : "asc"}
+                        onClick={() => handleSort(key as SortCol)}
+                      >
+                        {key.replace(/_/g, " ")}
+                      </TableSortLabel>
+                    ) : (
+                      key.replace(/_/g, " ")
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
@@ -233,10 +280,27 @@ export default function Curate() {
                   }
                 >
                   <TableCell sx={{ fontSize: 20 }}>{row.hanzi}</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>{row.simplified}</TableCell>
+                  <VotableCell
+                    col="radical"
+                    value={row.radical}
+                    vote={getVote(voteMap, "radical", row.radical)}
+                  />
                   <VotableCell
                     col="definition"
                     value={row.definition}
                     vote={getVote(voteMap, "definition", row.definition)}
+                  />
+                  <TableCell>{row.meaning}</TableCell>
+                  <VotableCell
+                    col="name_use"
+                    value={row.name_use}
+                    vote={getVote(voteMap, "name_use", row.name_use)}
+                  />
+                  <VotableCell
+                    col="note"
+                    value={row.note}
+                    vote={getVote(voteMap, "note", row.note)}
                   />
                   <VotableCell
                     col="pinyin"

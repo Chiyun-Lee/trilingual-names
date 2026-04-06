@@ -32,9 +32,49 @@ def startup() -> None:
 # Data
 # ---------------------------------------------------------------------------
 
+def _row_vote_cells(row: dict) -> list[tuple[str, str | None, int | None]]:
+    dp = row.get("decomposed_pinyin", {})
+    return [
+        ("definition",      row.get("definition"),      None),
+        ("pinyin",          row.get("pinyin"),          None),
+        ("toneless_pinyin", row.get("toneless_pinyin"), None),
+        ("hangul",          row.get("hangul"),          None),
+        ("anglo_hangul",    row.get("anglo_hangul"),    None),
+        ("katakana",        row.get("katakana"),        None),
+        ("anglo_katakana",  row.get("anglo_katakana"),  None),
+        ("decomposed_pinyin", dp.get("initial"),        0),
+        ("decomposed_pinyin", dp.get("final"),          1),
+        ("decomposed_pinyin", str(dp["tone"]) if dp.get("tone") is not None else None, 2),
+    ]
+
+
 @app.get("/api/data")
-def get_data(page: int = 0, page_size: int = 100) -> dict:
-    rows = load_rows()
+def get_data(page: int = 0, page_size: int = 100, filter: str = "all") -> dict:
+    all_rows = load_rows()
+
+    if filter != "all":
+        votes = db.get_votes()
+        upvoted = {f"{v['column_name']}::{v['value']}::{v['sub_index']}" for v in votes if v["vote"] == 1}
+        downvoted = {f"{v['column_name']}::{v['value']}::{v['sub_index']}" for v in votes if v["vote"] == -1}
+
+        def _key(col, val, idx):
+            return f"{col}::{val}::{idx}"
+
+        def _is_upvoted(row):
+            return any(_key(c, v, i) in upvoted for c, v, i in _row_vote_cells(row) if v)
+
+        def _is_downvoted(row):
+            return any(_key(c, v, i) in downvoted for c, v, i in _row_vote_cells(row) if v)
+
+        if filter == "upvoted":
+            rows = [r for r in all_rows if _is_upvoted(r)]
+        elif filter == "non-downvoted":
+            rows = [r for r in all_rows if not _is_downvoted(r)]
+        else:
+            rows = all_rows
+    else:
+        rows = all_rows
+
     total = len(rows)
     start = page * page_size
     return {
