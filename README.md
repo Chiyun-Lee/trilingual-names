@@ -2,6 +2,10 @@
 
 A tool for exploring and curating Chinese character data across Mandarin (pinyin), Korean (hangul), and Japanese (katakana) pronunciation systems.
 
+| Curate | Explore |
+|--------|---------|
+| ![Curate page — search and vote on characters](data/assets/Screenshot%202026-04-06%20at%2020.04.54.png) | ![Explore page — parallel categories flow](data/assets/Screenshot%202026-04-06%20at%2020.05.19.png) |
+
 ## TODO
 
 ```

@@ -1,9 +1,11 @@
 import FilterListIcon from "@mui/icons-material/FilterList";
+import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
   Chip,
   CircularProgress,
   FormControl,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Pagination,
@@ -15,6 +17,7 @@ import {
   TableHead,
   TableRow,
   TableSortLabel,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -147,12 +150,13 @@ function rowSortKey(row: Row, col: SortCol): string {
 export default function Curate() {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<VoteFilter>("all");
+  const [search, setSearch] = useState("");
   const [sortCol, setSortCol] = useState<SortCol | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["data", page, filter],
-    queryFn: () => api.getData(page, PAGE_SIZE, filter),
+    queryKey: ["data", page, filter, search],
+    queryFn: () => api.getData(page, PAGE_SIZE, filter, search),
   });
 
   const { data: votes = [] } = useQuery({
@@ -223,9 +227,28 @@ export default function Curate() {
             <MenuItem value="upvoted">Upvoted only</MenuItem>
           </Select>
         </FormControl>
+        <TextField
+          size="small"
+          placeholder="Search…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{ minWidth: 220 }}
+        />
         {data && (
           <Typography variant="body2" color="text.secondary">
-            {rows.length} / {data.total} rows
+            {data.total} row{data.total !== 1 ? "s" : ""}
           </Typography>
         )}
       </Box>

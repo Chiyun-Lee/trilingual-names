@@ -48,8 +48,22 @@ def _row_vote_cells(row: dict) -> list[tuple[str, str | None, int | None]]:
     ]
 
 
+_SEARCH_FIELDS = [
+    "hanzi", "simplified", "radical", "definition", "meaning",
+    "name_use", "note", "pinyin", "toneless_pinyin",
+    "hangul", "anglo_hangul", "katakana", "anglo_katakana",
+]
+
+def _row_matches(row: dict, needle: str) -> bool:
+    for field in _SEARCH_FIELDS:
+        val = row.get(field)
+        if val and needle in val.lower():
+            return True
+    return False
+
+
 @app.get("/api/data")
-def get_data(page: int = 0, page_size: int = 100, filter: str = "all") -> dict:
+def get_data(page: int = 0, page_size: int = 100, filter: str = "all", search: str = "") -> dict:
     all_rows = load_rows()
 
     if filter != "all":
@@ -74,6 +88,10 @@ def get_data(page: int = 0, page_size: int = 100, filter: str = "all") -> dict:
             rows = all_rows
     else:
         rows = all_rows
+
+    if search:
+        needle = search.lower()
+        rows = [r for r in rows if _row_matches(r, needle)]
 
     total = len(rows)
     start = page * page_size
