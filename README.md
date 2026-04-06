@@ -4,7 +4,9 @@ A tool for exploring and curating Chinese character data across Mandarin (pinyin
 
 ## TODO
 
-- Top 3000 most common characters
+```
+- 
+```
 
 ## Data sources
 
