@@ -7,8 +7,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  getData: (page: number, pageSize = 100, filter = "all", search = ""): Promise<DataResponse> =>
-    request(`/api/data?page=${page}&page_size=${pageSize}&filter=${filter}&search=${encodeURIComponent(search)}`),
+  getData: (page: number, pageSize = 100, filter = "all", search = "", sortCol = "", sortDir = "asc"): Promise<DataResponse> =>
+    request(`/api/data?page=${page}&page_size=${pageSize}&filter=${filter}&search=${encodeURIComponent(search)}&sort_col=${sortCol}&sort_dir=${sortDir}`),
 
   getVotes: (): Promise<Vote[]> => request("/api/votes"),
 

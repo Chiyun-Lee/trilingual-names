@@ -140,13 +140,6 @@ function DecomposedCell({ row, voteMap }: { row: Row; voteMap: Map<string, VoteV
 type SortCol = "hanzi" | "simplified" | "radical" | "definition" | "meaning" | "name_use" | "note"
   | "pinyin" | "toneless_pinyin" | "hangul" | "anglo_hangul" | "katakana" | "anglo_katakana";
 
-function rowSortKey(row: Row, col: SortCol): string {
-  if (col === "decomposed_pinyin" as string) return row.decomposed_pinyin.raw ?? "";
-  const val = row[col as keyof Row];
-  if (val === null || val === undefined) return "";
-  return String(val);
-}
-
 export default function Curate() {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState<VoteFilter>("all");
@@ -155,8 +148,8 @@ export default function Curate() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["data", page, filter, search],
-    queryFn: () => api.getData(page, PAGE_SIZE, filter, search),
+    queryKey: ["data", page, filter, search, sortCol, sortDir],
+    queryFn: () => api.getData(page, PAGE_SIZE, filter, search, sortCol ?? "", sortDir),
   });
 
   const { data: votes = [] } = useQuery({
@@ -167,23 +160,14 @@ export default function Curate() {
   const voteMap = useMemo(() => buildVoteMap(votes), [votes]);
 
   const rawRows = data?.rows ?? [];
-  const rows = useMemo(() => {
-    // In non-downvoted mode, re-apply the filter client-side so newly downvoted
-    // rows disappear instantly from the optimistic vote cache update.
-    const base = filter === "non-downvoted"
+  // In non-downvoted mode, re-apply the filter client-side so newly downvoted
+  // rows disappear instantly from the optimistic vote cache update.
+  const rows = useMemo(
+    () => filter === "non-downvoted"
       ? rawRows.filter((row) => !rowIsDownvoted(row, voteMap))
-      : rawRows;
-    if (!sortCol) return base;
-    return [...base].sort((a, b) => {
-      const ka = rowSortKey(a, sortCol);
-      const kb = rowSortKey(b, sortCol);
-      // Empty values always sink to bottom
-      if (!ka && kb) return 1;
-      if (ka && !kb) return -1;
-      const cmp = ka.localeCompare(kb, undefined, { sensitivity: "base" });
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-  }, [rawRows, sortCol, sortDir, filter, voteMap]);
+      : rawRows,
+    [rawRows, filter, voteMap]
+  );
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
@@ -194,6 +178,7 @@ export default function Curate() {
       setSortCol(col);
       setSortDir("asc");
     }
+    setPage(0);
   }
 
   const COLS: { key: string; sortable: boolean }[] = [
@@ -253,7 +238,7 @@ export default function Curate() {
         />
         {data && (
           <Typography variant="body2" color="text.secondary">
-            {filter === "non-downvoted" ? rows.length : data.total} row{data.total !== 1 ? "s" : ""}
+            {data.total} row{data.total !== 1 ? "s" : ""}
           </Typography>
         )}
       </Box>

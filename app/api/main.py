@@ -62,8 +62,26 @@ def _row_matches(row: dict, needle: str) -> bool:
     return False
 
 
+_SORTABLE_FIELDS = {
+    "hanzi", "simplified", "radical", "definition", "meaning",
+    "name_use", "note", "pinyin", "toneless_pinyin",
+    "hangul", "anglo_hangul", "katakana", "anglo_katakana",
+}
+
+def _sort_key(row: dict, col: str) -> str:
+    val = row.get(col)
+    return val.lower() if val else ""
+
+
 @app.get("/api/data")
-def get_data(page: int = 0, page_size: int = 100, filter: str = "all", search: str = "") -> dict:
+def get_data(
+    page: int = 0,
+    page_size: int = 100,
+    filter: str = "all",
+    search: str = "",
+    sort_col: str = "",
+    sort_dir: str = "asc",
+) -> dict:
     all_rows = load_rows()
 
     if filter != "all":
@@ -92,6 +110,14 @@ def get_data(page: int = 0, page_size: int = 100, filter: str = "all", search: s
     if search:
         needle = search.lower()
         rows = [r for r in rows if _row_matches(r, needle)]
+
+    if sort_col and sort_col in _SORTABLE_FIELDS:
+        desc = sort_dir == "desc"
+        # Empty values always last regardless of direction
+        nonempty = [r for r in rows if _sort_key(r, sort_col)]
+        empty    = [r for r in rows if not _sort_key(r, sort_col)]
+        nonempty.sort(key=lambda r: _sort_key(r, sort_col), reverse=desc)
+        rows = nonempty + empty
 
     total = len(rows)
     start = page * page_size
