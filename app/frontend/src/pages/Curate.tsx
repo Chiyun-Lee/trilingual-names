@@ -168,8 +168,13 @@ export default function Curate() {
 
   const rawRows = data?.rows ?? [];
   const rows = useMemo(() => {
-    if (!sortCol) return rawRows;
-    return [...rawRows].sort((a, b) => {
+    // In non-downvoted mode, re-apply the filter client-side so newly downvoted
+    // rows disappear instantly from the optimistic vote cache update.
+    const base = filter === "non-downvoted"
+      ? rawRows.filter((row) => !rowIsDownvoted(row, voteMap))
+      : rawRows;
+    if (!sortCol) return base;
+    return [...base].sort((a, b) => {
       const ka = rowSortKey(a, sortCol);
       const kb = rowSortKey(b, sortCol);
       // Empty values always sink to bottom
@@ -178,7 +183,7 @@ export default function Curate() {
       const cmp = ka.localeCompare(kb, undefined, { sensitivity: "base" });
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [rawRows, sortCol, sortDir]);
+  }, [rawRows, sortCol, sortDir, filter, voteMap]);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
@@ -248,7 +253,7 @@ export default function Curate() {
         />
         {data && (
           <Typography variant="body2" color="text.secondary">
-            {data.total} row{data.total !== 1 ? "s" : ""}
+            {filter === "non-downvoted" ? rows.length : data.total} row{data.total !== 1 ? "s" : ""}
           </Typography>
         )}
       </Box>

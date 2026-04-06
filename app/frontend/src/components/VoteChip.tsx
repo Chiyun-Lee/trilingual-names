@@ -3,7 +3,7 @@ import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { VoteValue } from "../api/types";
+import type { Vote, VoteValue } from "../api/types";
 
 interface Props {
   columnName: string;
@@ -28,7 +28,25 @@ export default function VoteChip({
         await api.putVote({ column_name: columnName, value, sub_index: subIndex, vote: incoming });
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["votes"] }),
+    onMutate: async (incoming) => {
+      await qc.cancelQueries({ queryKey: ["votes"] });
+      const prev = qc.getQueryData<Vote[]>(["votes"]);
+      qc.setQueryData<Vote[]>(["votes"], (old = []) => {
+        const thisKey = `${columnName}::${value}::${subIndex}`;
+        const rest = old.filter(
+          (v) => `${v.column_name}::${v.value}::${v.sub_index}` !== thisKey
+        );
+        if (incoming !== null) {
+          rest.push({ column_name: columnName, value, sub_index: subIndex, vote: incoming });
+        }
+        return rest;
+      });
+      return { prev };
+    },
+    onError: (_err, _incoming, ctx) => {
+      if (ctx?.prev !== undefined) qc.setQueryData(["votes"], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["votes"] }),
   });
 
   const handle = (v: VoteValue) => {
